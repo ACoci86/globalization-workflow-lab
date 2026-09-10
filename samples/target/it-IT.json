@@ -1,7 +1,7 @@
 {
-  "deviceProtection": "Proteggi i tuoi dispositiv",
-  "subscriptionExpiry": "Il tuo abbonamento scade tra giorni",
-  "scanComplete": "Scansione completata {user}",
+  "deviceProtection": "Proteggi fino a {count} dispositivi",
+  "subscriptionExpiry": "Il tuo abbonamento scade tra {days} giorni",
+  "scanComplete": "Scansione completata",
   "productName": "Secure VPN",
   "dismiss": "Non mostrare più"
 }
