@@ -1,0 +1,26 @@
+{
+  "name": "globalization-workflow-lab",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "qa": "tsx src/runQa.ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ACoci86/globalization-workflow-lab.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/ACoci86/globalization-workflow-lab/issues"
+  },
+  "homepage": "https://github.com/ACoci86/globalization-workflow-lab#readme",
+  "devDependencies": {
+    "@types/node": "^22.20.2",
+    "tsx": "^4.23.13",
+    "typescript": "^7.0.2"
+  }
+}
