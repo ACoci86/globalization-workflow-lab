@@ -1,0 +1,20 @@
+[
+  {
+    "source": "Scan complete",
+    "target": "Scansione completata",
+    "sourceLocale": "en-US",
+    "targetLocale": "it-IT"
+  },
+  {
+    "source": "Don't show this again",
+    "target": "Non mostrare più",
+    "sourceLocale": "en-US",
+    "targetLocale": "it-IT"
+  },
+  {
+    "source": "Secure VPN",
+    "target": "Secure VPN",
+    "sourceLocale": "en-US",
+    "targetLocale": "it-IT"
+  }
+]

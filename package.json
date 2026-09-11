@@ -5,7 +5,9 @@
   "main": "index.js",
   "scripts": {
     "qa": "tsx src/runQa.ts",
-    "benchmark": "tsx src/evaluation/runBenchmark.ts"
+    "benchmark": "tsx src/evaluation/runBenchmark.ts",
+    "qa:ai": "tsx src/runAiQa.ts",
+    "qa:full": "npm run qa && npm run qa:ai"
   },
   "repository": {
     "type": "git",
