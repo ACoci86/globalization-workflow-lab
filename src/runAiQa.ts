@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { evaluateAndDecide } from "./ai/evaluateAndDecide";
+import { MODEL_LABEL, REQUEST_DELAY_MS, sleep } from "./ai/llmClient";
 import type { AiQaReport, AiQaResult } from "./types/aiQaReport";
 
 async function main() {
@@ -15,6 +16,9 @@ async function main() {
   const target = JSON.parse(
     fs.readFileSync("samples/target/it-IT.json", "utf-8"),
   ) as Record<string, string>;
+
+  console.log(`Model: ${MODEL_LABEL}`);
+  console.log("");
 
   const results: AiQaResult[] = [];
   let hasBlockingIssues = false;
@@ -33,9 +37,16 @@ async function main() {
       targetLocale,
     );
 
-    console.log(`[${key}]`);
-    console.log(result);
-    console.log("");
+    const { accuracy, fluency, style, confidence } = result.evaluation;
+
+    console.log(
+      `${result.finalDecision.toUpperCase().padEnd(6)} [${key}] ` +
+        `acc=${accuracy} flu=${fluency} sty=${style} conf=${confidence}`,
+    );
+
+    for (const reason of result.evaluation.reasons) {
+      console.log(`       - ${reason}`);
+    }
 
     results.push({
       key,
@@ -48,12 +59,16 @@ async function main() {
     if (result.finalDecision !== "pass") {
       hasBlockingIssues = true;
     }
+
+    if (REQUEST_DELAY_MS > 0) {
+      await sleep(REQUEST_DELAY_MS);
+    }
   }
 
   const report: AiQaReport = {
     sourceLocale,
     targetLocale,
-    model: "qwen2.5:3b",
+    model: MODEL_LABEL,
     generatedAt: new Date().toISOString(),
 
     summary: {
@@ -68,7 +83,8 @@ async function main() {
     results,
   };
 
-  const reportPath = path.join("reports", "ai-qa-report.json");
+  const modelSlug = MODEL_LABEL.replace(/[^a-zA-Z0-9.-]/g, "-");
+  const reportPath = path.join("reports", `ai-qa-report.${modelSlug}.json`);
 
   fs.mkdirSync(path.dirname(reportPath), {
     recursive: true,
@@ -76,6 +92,7 @@ async function main() {
 
   fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf-8");
 
+  console.log("");
   console.log(`AI QA report written to ${reportPath}`);
   console.log(
     `Summary: ${report.summary.passed} passed, ` +

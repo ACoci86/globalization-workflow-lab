@@ -1,21 +1,28 @@
 {
   "name": "globalization-workflow-lab",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Localisation QA pipeline for it-IT: deterministic checks plus AI evaluation with a policy layer",
+  "main": "src/runQa.ts",
   "scripts": {
     "qa": "tsx src/runQa.ts",
     "benchmark": "tsx src/evaluation/runBenchmark.ts",
-    "qa:ai": "tsx src/runAiQa.ts",
+    "qa:ai": "tsx --env-file=.env src/runAiQa.ts",
+    "qa:ai:gemini": "PROVIDER=gemini tsx --env-file=.env src/runAiQa.ts",
     "qa:full": "npm run qa && npm run qa:ai"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/ACoci86/globalization-workflow-lab.git"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "localization",
+    "l10n",
+    "qa",
+    "italian",
+    "llm"
+  ],
+  "author": "Alessio Coci",
+  "license": "MIT",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/ACoci86/globalization-workflow-lab/issues"

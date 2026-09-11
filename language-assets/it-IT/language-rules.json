@@ -1,7 +1,5 @@
 {
   "locale": "it-IT",
-  "protectedTerms": [
-    "Secure VPN"
-  ],
+  "protectedTerms": ["Secure VPN", "Total Protection", "Safe Browse"],
   "maxLengthRatio": 1.4
 }

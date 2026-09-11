@@ -1,7 +1,17 @@
 {
+  "welcomeTitle": "Welcome to Total Protection",
   "deviceProtection": "Protect up to {count} devices",
   "subscriptionExpiry": "Your subscription expires in {days} days",
   "scanComplete": "Scan complete",
-  "productName": "Secure VPN",
-  "dismiss": "Don't show this again"
+  "threatsFound": "{count} threats found",
+  "renewNow": "Renew now",
+  "vpnOff": "Secure VPN is off",
+  "dismiss": "Don't show this again",
+  "passwordWeak": "Your password is weak. Change it now.",
+  "firewallBlocked": "Firewall blocked {count} connections",
+  "safeBrowseEnabled": "Safe Browse is enabled",
+  "deleteConfirm": "Are you sure you want to delete this file?",
+  "updateAvailable": "Update available",
+  "scanNow": "Scan now",
+  "lastScan": "Last scan: {date}"
 }
