@@ -1,0 +1,57 @@
+[
+  {
+    "id": "placeholder-missing",
+    "source": "Protect up to {count} devices",
+    "target": "Proteggi i tuoi dispositivi",
+    "sourceLocale": "en-US",
+    "targetLocale": "it-IT",
+    "expected": {
+      "status": "fail",
+      "issue": "missing-placeholder"
+    }
+  },
+  {
+    "id": "terminology-wrong",
+    "source": "Protect up to 5 devices",
+    "target": "Proteggi fino a 5 apparecchi",
+    "sourceLocale": "en-US",
+    "targetLocale": "it-IT",
+    "expected": {
+      "status": "fail",
+      "issue": "terminology"
+    }
+  },
+  {
+    "id": "protected-term-changed",
+    "source": "Secure VPN",
+    "target": "VPN Sicura",
+    "sourceLocale": "en-US",
+    "targetLocale": "it-IT",
+    "expected": {
+      "status": "fail",
+      "issue": "protected-term"
+    }
+  },
+  {
+    "id": "untranslated",
+    "source": "Scan complete",
+    "target": "Scan complete",
+    "sourceLocale": "en-US",
+    "targetLocale": "it-IT",
+    "expected": {
+      "status": "fail",
+      "issue": "untranslated"
+    }
+  },
+  {
+    "id": "valid-translation",
+    "source": "Scan complete",
+    "target": "Scansione completata",
+    "sourceLocale": "en-US",
+    "targetLocale": "it-IT",
+    "expected": {
+      "status": "pass",
+      "issue": null
+    }
+  }
+]

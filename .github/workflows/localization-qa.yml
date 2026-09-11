@@ -23,8 +23,11 @@ jobs:
       - name: Run localization QA
         run: npm run qa
 
+      - name: Run QA benchmark
+        run: npm run benchmark
+
       - name: Upload QA report
-        if: always()
+        if: always() # Upload the JSON report whether QA passes or fails
         uses: actions/upload-artifact@v4
         with:
           name: localization-qa-report

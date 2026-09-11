@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "qa": "tsx src/runQa.ts"
+    "qa": "tsx src/runQa.ts",
+    "benchmark": "tsx src/evaluation/runBenchmark.ts"
   },
   "repository": {
     "type": "git",
