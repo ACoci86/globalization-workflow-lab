@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 import { evaluateAndDecide } from "../ai/evaluateAndDecide";
+import { getUsageSummary, resetUsage } from "../ai/usageTracker";
 
 type ExpectedDecision = "pass" | "review" | "fail";
 
@@ -23,8 +24,11 @@ const benchmark = JSON.parse(
 ) as AiBenchmarkEntry[];
 
 async function main() {
+  resetUsage();
+
   let correct = 0;
   let errors = 0;
+  let totalDurationMs = 0;
 
   console.log("");
   console.log("AI LINGUISTIC QA BENCHMARK");
@@ -41,6 +45,8 @@ async function main() {
     );
 
     const durationMs = Date.now() - startedAt;
+
+    totalDurationMs += durationMs;
 
     if (result.decision === "error") {
       errors++;
@@ -87,6 +93,31 @@ async function main() {
   console.log(`Correct decisions: ${correct}/${benchmark.length}`);
   console.log(`Accuracy: ${((correct / benchmark.length) * 100).toFixed(1)}%`);
   console.log(`API/system errors: ${errors}`);
+
+  console.log(`Total runtime: ${(totalDurationMs / 1000).toFixed(2)} s`);
+
+  console.log(
+    `Average runtime: ${(totalDurationMs / benchmark.length / 1000).toFixed(2)} s/item`,
+  );
+
+  const usage = getUsageSummary();
+
+  console.log("");
+  console.log("USAGE / COST");
+  console.log("------------");
+  console.log(`Requests: ${usage.requests}`);
+  console.log(`Input tokens: ${usage.inputTokens}`);
+  console.log(`Output tokens: ${usage.outputTokens}`);
+
+  if (usage.pricingAvailable) {
+    console.log(`Estimated API cost: $${usage.estimatedCostUsd.toFixed(4)}`);
+
+    console.log(
+      `Average cost/item: $${(usage.estimatedCostUsd / benchmark.length).toFixed(4)}`,
+    );
+  } else {
+    console.log("Estimated API cost: pricing unavailable for this model");
+  }
 
   if (correct !== benchmark.length || errors > 0) {
     process.exitCode = 1;

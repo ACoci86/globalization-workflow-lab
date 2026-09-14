@@ -1,4 +1,5 @@
 import { AI_EVALUATION_SCHEMA } from "./evaluationSchema";
+import { recordUsage } from "./usageTracker";
 
 export const ANTHROPIC_MODEL =
   process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
@@ -55,6 +56,22 @@ export async function generateWithAnthropic(prompt: string): Promise<string> {
 
   const data: unknown = await response.json();
   const text = extractMessageText(data);
+
+  if (typeof data === "object" && data !== null) {
+    const messageData = data as {
+      usage?: {
+        input_tokens?: number;
+        output_tokens?: number;
+      };
+    };
+
+    recordUsage({
+      provider: "anthropic",
+      model: ANTHROPIC_MODEL,
+      inputTokens: messageData.usage?.input_tokens ?? 0,
+      outputTokens: messageData.usage?.output_tokens ?? 0,
+    });
+  }
 
   if (!text) {
     throw new Error("Anthropic returned no text content.");

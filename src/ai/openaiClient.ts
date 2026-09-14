@@ -1,4 +1,5 @@
 import { AI_EVALUATION_SCHEMA } from "./evaluationSchema";
+import { recordUsage } from "./usageTracker";
 
 export const OPENAI_MODEL = process.env.OPENAI_MODEL ?? "gpt-5-mini";
 
@@ -58,6 +59,22 @@ export async function generateWithOpenAI(prompt: string): Promise<string> {
 
   const data: unknown = await response.json();
   const text = extractResponseText(data);
+
+  if (typeof data === "object" && data !== null) {
+    const responseData = data as {
+      usage?: {
+        input_tokens?: number;
+        output_tokens?: number;
+      };
+    };
+
+    recordUsage({
+      provider: "openai",
+      model: OPENAI_MODEL,
+      inputTokens: responseData.usage?.input_tokens ?? 0,
+      outputTokens: responseData.usage?.output_tokens ?? 0,
+    });
+  }
 
   if (!text) {
     throw new Error("OpenAI returned no output text.");

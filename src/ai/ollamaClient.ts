@@ -1,3 +1,5 @@
+import { recordUsage } from "./usageTracker";
+
 export const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? "qwen2.5:3b";
 
 export async function generateWithOllama(prompt: string): Promise<string> {
@@ -26,7 +28,16 @@ export async function generateWithOllama(prompt: string): Promise<string> {
 
   const data = (await response.json()) as {
     response: string;
+    prompt_eval_count?: number;
+    eval_count?: number;
   };
+
+  recordUsage({
+    provider: "ollama",
+    model: OLLAMA_MODEL,
+    inputTokens: data.prompt_eval_count ?? 0,
+    outputTokens: data.eval_count ?? 0,
+  });
 
   return data.response;
 }
