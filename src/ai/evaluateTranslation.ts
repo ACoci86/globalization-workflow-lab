@@ -1,25 +1,53 @@
 import { generate } from "./llmClient";
 import { buildEvaluationPrompt } from "./buildEvaluationPrompt";
-import type { AiEvaluation } from "./types";
+import type { AiEvaluation, AiIssue, AiIssueCategory } from "./types";
 
 function stripFences(text: string): string {
   return text.replace(/```json|```/g, "").trim();
 }
 
-function isValidEvaluation(value: unknown): value is AiEvaluation {
-  if (typeof value !== "object" || value === null) return false;
+const VALID_CATEGORIES: AiIssueCategory[] = [
+  "accuracy",
+  "fluency",
+  "style",
+  "terminology",
+  "other",
+];
 
-  const v = value as Record<string, unknown>;
-  const inRange = (n: unknown) => typeof n === "number" && n >= 1 && n <= 5;
+function isValidIssue(value: unknown): value is AiIssue {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const issue = value as Record<string, unknown>;
 
   return (
-    inRange(v.accuracy) &&
-    inRange(v.fluency) &&
-    inRange(v.style) &&
-    typeof v.confidence === "number" &&
-    v.confidence >= 0 &&
-    v.confidence <= 1 &&
-    Array.isArray(v.reasons)
+    typeof issue.category === "string" &&
+    VALID_CATEGORIES.includes(issue.category as AiIssueCategory) &&
+    typeof issue.description === "string" &&
+    issue.description.trim().length > 0
+  );
+}
+
+function isValidEvaluation(value: unknown): value is AiEvaluation {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const evaluation = value as Record<string, unknown>;
+
+  const isValidScore = (value: unknown) =>
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= 5;
+
+  return (
+    isValidScore(evaluation.accuracy) &&
+    isValidScore(evaluation.fluency) &&
+    isValidScore(evaluation.style) &&
+    Array.isArray(evaluation.issues) &&
+    evaluation.issues.every(isValidIssue)
   );
 }
 
@@ -43,23 +71,17 @@ export async function evaluateTranslation(
       const raw = await generate(prompt);
       const parsed: unknown = JSON.parse(stripFences(raw));
 
-      if (isValidEvaluation(parsed)) {
-        return parsed;
+      if (!isValidEvaluation(parsed)) {
+        throw new Error(`Invalid AI evaluation shape: ${raw}`);
       }
 
-      lastError = new Error(`Invalid evaluation shape: ${raw}`);
+      return parsed;
     } catch (error) {
       lastError = error;
     }
   }
 
-  // Two failures: hand it to a human rather than guess.
-  return {
-    accuracy: 3,
-    fluency: 3,
-    style: 3,
-    confidence: 0,
-    decision: "review",
-    reasons: [`Model output could not be parsed: ${String(lastError)}`],
-  };
+  throw new Error(
+    `AI evaluation failed after 2 attempts: ${String(lastError)}`,
+  );
 }

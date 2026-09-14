@@ -1,8 +1,8 @@
-import type { AiDecision, AiEvaluation } from "./types";
+import type { AiEvaluation, QaDecision } from "./types";
 
 export function applyEvaluationPolicy(
   evaluation: AiEvaluation,
-): AiDecision {
+): Exclude<QaDecision, "error"> {
   if (evaluation.accuracy <= 2) {
     return "fail";
   }
@@ -11,11 +11,15 @@ export function applyEvaluationPolicy(
     return "review";
   }
 
-  if (evaluation.confidence < 0.8) {
+  if (evaluation.fluency <= 2) {
     return "review";
   }
 
-  if (evaluation.fluency <= 2 || evaluation.style <= 2) {
+  if (evaluation.style <= 2) {
+    return "review";
+  }
+
+  if (evaluation.issues.length > 0) {
     return "review";
   }
 

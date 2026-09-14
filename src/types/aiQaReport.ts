@@ -1,11 +1,13 @@
-import type { AiDecision, AiEvaluation } from "../ai/types";
+import type { AiEvaluation, QaDecision } from "../ai/types";
 
 export type AiQaResult = {
   key: string;
   sourceText: string;
   targetText: string;
-  evaluation: AiEvaluation;
-  finalDecision: AiDecision;
+
+  decision: QaDecision;
+  evaluation: AiEvaluation | null;
+  error: string | null;
 };
 
 export type AiQaReport = {
@@ -18,6 +20,7 @@ export type AiQaReport = {
     passed: number;
     reviews: number;
     failures: number;
+    errors: number;
   };
 
   results: AiQaResult[];

@@ -1,111 +1,102 @@
 import fs from "node:fs";
 import path from "node:path";
-
 import { evaluateAndDecide } from "./ai/evaluateAndDecide";
-import { MODEL_LABEL, REQUEST_DELAY_MS, sleep } from "./ai/llmClient";
-import type { AiQaReport, AiQaResult } from "./types/aiQaReport";
+import type { AiQaReport } from "./types/aiQaReport";
+
+const sourceLocale = "en-US";
+const targetLocale = "it-IT";
+
+const translationsPath = path.resolve("data", "translations.json");
+
+const translations = JSON.parse(
+  fs.readFileSync(translationsPath, "utf8"),
+) as Record<string, { source: string; target: string }>;
 
 async function main() {
-  const sourceLocale = "en-US";
-  const targetLocale = "it-IT";
+  const results: AiQaReport["results"] = [];
 
-  const source = JSON.parse(
-    fs.readFileSync("samples/source/en-US.json", "utf-8"),
-  ) as Record<string, string>;
-
-  const target = JSON.parse(
-    fs.readFileSync("samples/target/it-IT.json", "utf-8"),
-  ) as Record<string, string>;
-
-  console.log(`Model: ${MODEL_LABEL}`);
-  console.log("");
-
-  const results: AiQaResult[] = [];
-  let hasBlockingIssues = false;
-
-  for (const [key, sourceText] of Object.entries(source)) {
-    const targetText = target[key];
-
-    if (targetText === undefined) {
-      continue;
-    }
-
+  for (const [key, item] of Object.entries(translations)) {
     const result = await evaluateAndDecide(
-      sourceText,
-      targetText,
+      item.source,
+      item.target,
       sourceLocale,
       targetLocale,
     );
 
-    const { accuracy, fluency, style, confidence } = result.evaluation;
-
-    console.log(
-      `${result.finalDecision.toUpperCase().padEnd(6)} [${key}] ` +
-        `acc=${accuracy} flu=${fluency} sty=${style} conf=${confidence}`,
-    );
-
-    for (const reason of result.evaluation.reasons) {
-      console.log(`       - ${reason}`);
-    }
-
     results.push({
       key,
-      sourceText,
-      targetText,
+      sourceText: item.source,
+      targetText: item.target,
+      decision: result.decision,
       evaluation: result.evaluation,
-      finalDecision: result.finalDecision,
+      error: result.error,
     });
 
-    if (result.finalDecision !== "pass") {
-      hasBlockingIssues = true;
+    console.log(`\n${result.decision.toUpperCase()} [${key}]`);
+    console.log(`Source: ${item.source}`);
+    console.log(`Target: ${item.target}`);
+
+    if (result.evaluation) {
+      console.log(
+        `Scores: accuracy=${result.evaluation.accuracy}, fluency=${result.evaluation.fluency}, style=${result.evaluation.style}`,
+      );
+
+      if (result.evaluation.issues.length > 0) {
+        for (const issue of result.evaluation.issues) {
+          console.log(`- ${issue.category}: ${issue.description}`);
+        }
+      }
     }
 
-    if (REQUEST_DELAY_MS > 0) {
-      await sleep(REQUEST_DELAY_MS);
+    if (result.error) {
+      console.log(`ERROR: ${result.error}`);
     }
   }
 
   const report: AiQaReport = {
     sourceLocale,
     targetLocale,
-    model: MODEL_LABEL,
+    model: process.env.OPENAI_MODEL
+      ? `openai/${process.env.OPENAI_MODEL}`
+      : process.env.ANTHROPIC_MODEL
+        ? `anthropic/${process.env.ANTHROPIC_MODEL}`
+        : "unknown",
     generatedAt: new Date().toISOString(),
 
     summary: {
-      passed: results.filter((result) => result.finalDecision === "pass")
-        .length,
-      reviews: results.filter((result) => result.finalDecision === "review")
-        .length,
-      failures: results.filter((result) => result.finalDecision === "fail")
-        .length,
+      passed: results.filter((r) => r.decision === "pass").length,
+      reviews: results.filter((r) => r.decision === "review").length,
+      failures: results.filter((r) => r.decision === "fail").length,
+      errors: results.filter((r) => r.decision === "error").length,
     },
 
     results,
   };
 
-  const modelSlug = MODEL_LABEL.replace(/[^a-zA-Z0-9.-]/g, "-");
-  const reportPath = path.join("reports", `ai-qa-report.${modelSlug}.json`);
+  const reportsDir = path.resolve("reports");
+  fs.mkdirSync(reportsDir, { recursive: true });
 
-  fs.mkdirSync(path.dirname(reportPath), {
-    recursive: true,
-  });
+  const reportPath = path.join(reportsDir, `ai-qa-report-${Date.now()}.json`);
 
-  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2), "utf-8");
+  fs.writeFileSync(reportPath, JSON.stringify(report, null, 2));
 
-  console.log("");
-  console.log(`AI QA report written to ${reportPath}`);
-  console.log(
-    `Summary: ${report.summary.passed} passed, ` +
-      `${report.summary.reviews} reviews, ` +
-      `${report.summary.failures} failures`,
-  );
+  console.log("\nSummary");
+  console.log(`PASS: ${report.summary.passed}`);
+  console.log(`REVIEW: ${report.summary.reviews}`);
+  console.log(`FAIL: ${report.summary.failures}`);
+  console.log(`ERROR: ${report.summary.errors}`);
+  console.log(`Report: ${reportPath}`);
 
-  if (hasBlockingIssues) {
-    console.log("AI QA requires review or contains failures.");
-    process.exit(1);
+  if (
+    report.summary.failures > 0 ||
+    report.summary.reviews > 0 ||
+    report.summary.errors > 0
+  ) {
+    process.exitCode = 1;
   }
-
-  console.log("AI QA passed.");
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

@@ -1,9 +1,12 @@
 import fs from "node:fs";
 
+export type TerminologyEnforcement = "strict" | "advisory";
+
 export type TerminologyEntry = {
   source: string;
   approvedTarget: string;
   notes: string;
+  enforcement: TerminologyEnforcement;
 };
 
 export function loadTerminology(filePath: string): TerminologyEntry[] {
@@ -14,12 +17,16 @@ export function loadTerminology(filePath: string): TerminologyEntry[] {
   const dataLines = lines.slice(1);
 
   return dataLines.map((line) => {
-    const [source, approvedTarget, notes] = line.split(",");
+    const [source, approvedTarget, notes, enforcementRaw] = line.split(",");
+
+    const enforcement: TerminologyEnforcement =
+      enforcementRaw?.trim() === "advisory" ? "advisory" : "strict";
 
     return {
-      source,
-      approvedTarget,
-      notes
+      source: source.trim(),
+      approvedTarget: approvedTarget.trim(),
+      notes: notes?.trim() ?? "",
+      enforcement,
     };
   });
 }

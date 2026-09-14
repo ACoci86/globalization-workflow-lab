@@ -1,0 +1,37 @@
+[
+  {
+    "id": "scan-complete",
+    "source": "Scan complete",
+    "target": "Scansione completata",
+    "expectedDecision": "pass",
+    "category": "none"
+  },
+  {
+    "id": "renew-now",
+    "source": "Renew now",
+    "target": "Rinnovare ora",
+    "expectedDecision": "review",
+    "category": "style"
+  },
+  {
+    "id": "formal-register",
+    "source": "Your password is weak. Change it now.",
+    "target": "La Sua password è debole. La cambi subito.",
+    "expectedDecision": "review",
+    "category": "style"
+  },
+  {
+    "id": "meaning-reversal",
+    "source": "Firewall blocked {count} connections",
+    "target": "Il firewall ha consentito {count} connessioni",
+    "expectedDecision": "fail",
+    "category": "accuracy"
+  },
+  {
+    "id": "added-meaning",
+    "source": "Are you sure you want to delete this file?",
+    "target": "Sei sicuro di voler eliminare definitivamente questo file?",
+    "expectedDecision": "review",
+    "category": "accuracy"
+  }
+]

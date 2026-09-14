@@ -1,14 +1,21 @@
 {
   "name": "globalization-workflow-lab",
   "version": "1.0.0",
-  "description": "Localisation QA pipeline for it-IT: deterministic checks plus AI evaluation with a policy layer",
+  "description": "Hybrid localisation QA pipeline for it-IT: deterministic checks, AI linguistic evaluation, and policy-based decision making with OpenAI, Claude, or Ollama",
   "main": "src/runQa.ts",
   "scripts": {
     "qa": "tsx src/runQa.ts",
     "benchmark": "tsx src/evaluation/runBenchmark.ts",
+    "benchmark:ai:openai": "tsx --env-file=.env src/evaluation/runAiBenchmark.ts --provider=openai",
+    "benchmark:ai:claude": "tsx --env-file=.env src/evaluation/runAiBenchmark.ts --provider=anthropic",
+    "benchmark:ai:ollama": "tsx --env-file=.env src/evaluation/runAiBenchmark.ts --provider=ollama",
     "qa:ai": "tsx --env-file=.env src/runAiQa.ts",
-    "qa:ai:gemini": "PROVIDER=gemini tsx --env-file=.env src/runAiQa.ts",
-    "qa:full": "npm run qa && npm run qa:ai"
+    "qa:ai:openai": "tsx --env-file=.env src/runAiQa.ts --provider=openai",
+    "qa:ai:claude": "tsx --env-file=.env src/runAiQa.ts --provider=anthropic",
+    "qa:ai:ollama": "tsx --env-file=.env src/runAiQa.ts --provider=ollama",
+    "qa:hybrid:openai": "tsx --env-file=.env src/runHybridQa.ts --provider=openai",
+    "qa:hybrid:claude": "tsx --env-file=.env src/runHybridQa.ts --provider=anthropic",
+    "qa:hybrid:ollama": "tsx --env-file=.env src/runHybridQa.ts --provider=ollama"
   },
   "repository": {
     "type": "git",

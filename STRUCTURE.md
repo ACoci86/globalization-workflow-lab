@@ -1,132 +1,127 @@
 # Project Structure
 
 This project checks Italian translations (`it-IT`) of English UI strings (`en-US`).
-There are two kinds of checks:
 
-- **Deterministic QA**: fixed rules (placeholders, glossary terms, product names, and more).
-- **AI QA**: a local model (Ollama, `qwen2.5:3b`) scores meaning, fluency, and style.
+There are two QA layers:
+
+- **Deterministic QA**: fixed checks for keys, placeholders, terminology, protected terms, untranslated content, translation-memory consistency, and length.
+- **AI QA**: OpenAI, Claude, or an optional local Ollama model scores meaning, fluency, and style; a deterministic policy converts those scores into `pass`, `review`, or `fail`.
+
+OpenAI and Claude use the same schema-constrained JSON output shape so their results can be compared consistently.
 
 ## Folders
 
-```
+```text
 globalization-workflow-lab/
-├── .github/workflows/
-│   └── localization-qa.yml        CI: runs QA + benchmark, uploads the report
+├── .env                            local API keys/config (git-ignored)
+├── .env.example                    safe configuration template
+├── .gitignore
+├── package.json
+├── package-lock.json
+├── tsconfig.json
+├── STRUCTURE.md
 │
 ├── samples/
-│   ├── source/en-US.json          English strings (the source)
-│   └── target/it-IT.json          Italian strings (the translation to check)
+│   ├── source/en-US.json          English source strings
+│   └── target/it-IT.json          Italian translations
 │
 ├── language-assets/
 │   ├── it-IT/
 │   │   ├── language-rules.json    protected terms + max length ratio
-│   │   ├── terminology.csv        approved glossary (English → Italian)
-│   │   └── style-guide.md         style guide for people (not read by code)
+│   │   ├── terminology.csv        approved glossary
+│   │   └── style-guide.md         human-readable Italian style guide
 │   └── translation-memory/
-│       └── en-US_it-IT.json       past approved translations
+│       └── en-US_it-IT.json       approved historical translations
 │
 ├── evaluation/
-│   └── benchmark.json             test cases with the expected result
+│   └── benchmark.json             deterministic QA benchmark cases
 │
 ├── src/
-│   ├── runQa.ts                   start of deterministic QA   (npm run qa)
-│   ├── runAiQa.ts                 start of AI QA              (npm run qa:ai)
-│   ├── index.ts                   leftover: prints the glossary
+│   ├── runQa.ts                   deterministic QA entry point
+│   ├── runAiQa.ts                 AI QA entry point
 │   │
-│   ├── qa/                        deterministic checks
-│   │   ├── checkKeys.ts               missing / extra keys
-│   │   ├── placeholders.ts            finds {placeholders}
-│   │   ├── comparePlaceholders.ts     missing / extra placeholders
-│   │   ├── terminology.ts             loads terminology.csv
-│   │   ├── checkTerminology.ts        approved glossary terms used?
-│   │   ├── checkProtectedTerms.ts     product names unchanged?
-│   │   ├── checkUntranslated.ts       target same as source?
-│   │   ├── checkLength.ts             target too long?
-│   │   ├── translationMemory.ts       loads translation memory
-│   │   ├── findTranslationMemoryMatch.ts  finds an exact memory match
-│   │   ├── checkTranslationMemory.ts  target differs from memory?
-│   │   ├── createReport.ts            builds the report + summary
-│   │   └── writeReport.ts             saves the report as JSON
+│   ├── qa/                        deterministic checks/reporting
 │   │
-│   ├── ai/                        AI evaluation
-│   │   ├── ollamaClient.ts            calls Ollama on localhost:11434
-│   │   ├── buildEvaluationPrompt.ts   writes the prompt for the model
-│   │   ├── evaluateTranslation.ts     prompt → model → JSON scores
-│   │   ├── applyEvaluationPolicy.ts   scores → pass / review / fail
-│   │   ├── evaluateAndDecide.ts       runs evaluate + policy together
-│   │   └── types.ts                   AI score and decision types
+│   ├── ai/
+│   │   ├── llmClient.ts           provider selection
+│   │   ├── openaiClient.ts        OpenAI Responses API
+│   │   ├── anthropicClient.ts     Anthropic Messages API
+│   │   ├── ollamaClient.ts        optional local baseline
+│   │   ├── evaluationSchema.ts    shared JSON output schema
+│   │   ├── buildEvaluationPrompt.ts
+│   │   ├── evaluateTranslation.ts
+│   │   ├── applyEvaluationPolicy.ts
+│   │   ├── evaluateAndDecide.ts
+│   │   └── types.ts
 │   │
-│   ├── evaluation/                benchmark               (npm run benchmark)
-│   │   ├── benchmark.ts               loads benchmark.json
-│   │   ├── evaluateBenchmarkEntry.ts  runs the checks on one case
-│   │   └── runBenchmark.ts            runs all cases, prints accuracy
-│   │
-│   ├── types/
-│   │   ├── qaReport.ts                shape of qa-report.json
-│   │   └── aiQaReport.ts              shape of ai-qa-report.json
-│   │
-│   └── test*.ts                   manual scripts that only print output
+│   ├── evaluation/                deterministic benchmark runner
+│   └── types/                     report types
 │
-└── reports/                       created when run (ignored by git)
-    ├── qa-report.json
-    └── ai-qa-report.json
+└── reports/                       generated QA reports (git-ignored)
 ```
 
-## How it runs
+## AI provider setup
 
-```mermaid
-flowchart TD
-    subgraph Inputs
-        S["samples/source/en-US.json"]
-        T["samples/target/it-IT.json"]
-        G["terminology.csv"]
-        R["language-rules.json"]
-        M["translation memory"]
-        B["evaluation/benchmark.json"]
-    end
+Put your keys in `.env`:
 
-    subgraph QA["npm run qa (src/runQa.ts)"]
-        Q1["For each key:<br/>keys, placeholders, terminology,<br/>translation memory, protected terms,<br/>untranslated, length"]
-        Q2["createReport + writeReport"]
-        Q1 --> Q2
-    end
+```bash
+PROVIDER=openai
 
-    subgraph AI["npm run qa:ai (src/runAiQa.ts)"]
-        A1["buildEvaluationPrompt"]
-        A2["Ollama qwen2.5:3b"]
-        A3["applyEvaluationPolicy"]
-        A1 --> A2 --> A3
-    end
+OPENAI_API_KEY=your_openai_key_here
+OPENAI_MODEL=gpt-5-mini
 
-    subgraph BM["npm run benchmark"]
-        B1["evaluateBenchmarkEntry<br/>(copy of some QA checks)"]
-        B2["accuracy X/5"]
-        B1 --> B2
-    end
+ANTHROPIC_API_KEY=your_anthropic_key_here
+ANTHROPIC_MODEL=claude-sonnet-5
 
-    S --> Q1
-    T --> Q1
-    G --> Q1
-    R --> Q1
-    M --> Q1
-    Q2 --> QR["reports/qa-report.json"]
-
-    S --> A1
-    T --> A1
-    A3 --> AR["reports/ai-qa-report.json"]
-
-    B --> B1
-    G --> B1
+OLLAMA_MODEL=qwen2.5:3b
+REQUEST_DELAY_MS=0
 ```
+
+Never commit `.env`. It is included in `.gitignore`.
 
 ## Commands
 
-| Command | What it does | Used in CI |
-|---|---|---|
-| `npm run qa` | Deterministic QA, writes `reports/qa-report.json` | Yes |
-| `npm run benchmark` | Checks if the QA rules find the expected problems | Yes |
-| `npm run qa:ai` | AI QA, needs Ollama running on your machine | No |
-| `npm run qa:full` | `qa`, then `qa:ai` (AI runs only if `qa` passes) | No |
+| Command | What it does |
+|---|---|
+| `npm run qa` | Runs deterministic QA and writes `reports/qa-report.json` |
+| `npm run benchmark` | Runs the deterministic-rule benchmark |
+| `npm run qa:ai` | Runs AI QA using `PROVIDER` from `.env` |
+| `npm run qa:ai:openai` | Forces OpenAI regardless of `PROVIDER` |
+| `npm run qa:ai:claude` | Forces Claude regardless of `PROVIDER` |
+| `npm run qa:ai:ollama` | Forces the local Ollama baseline |
+| `npm run qa:full` | Runs deterministic QA, then AI QA only if deterministic QA exits successfully |
+
+## AI API flow
+
+```text
+source + target
+     |
+buildEvaluationPrompt
+     |
+     +--> OpenAI Responses API --------+
+     |                                  |
+     +--> Anthropic Messages API -------+--> shared JSON evaluation
+     |                                  |       |
+     +--> Ollama local API -------------+       v
+                                         applyEvaluationPolicy
+                                                  |
+                                         pass / review / fail
+```
+
+OpenAI and Claude both receive the same evaluation schema:
+
+```json
+{
+  "accuracy": 1,
+  "fluency": 1,
+  "style": 1,
+  "confidence": 0.0,
+  "decision": "review",
+  "reasons": []
+}
+```
+
+Scores are constrained to 1–5 and `decision` is constrained to `pass`, `review`, or `fail` by the API response schema. `evaluateTranslation.ts` still validates the returned values before accepting them.
 
 ## Deterministic checks
 
@@ -141,13 +136,13 @@ flowchart TD
 | Different from translation memory | warn |
 | Target too long (over `maxLengthRatio`) | warn |
 
-Any **fail** makes `npm run qa` exit with code 1, so CI fails.
+Any **fail** makes `npm run qa` exit with code 1.
 
 ## AI decision rules
 
-`applyEvaluationPolicy.ts` decides, not the model:
+`applyEvaluationPolicy.ts` makes the final decision rather than trusting the model's decision field:
 
-| Rule | Decision |
+| Rule | Final decision |
 |---|---|
 | accuracy ≤ 2 | fail |
 | accuracy = 3 | review |

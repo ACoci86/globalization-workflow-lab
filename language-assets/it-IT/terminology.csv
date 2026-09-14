@@ -1,7 +1,7 @@
-source,approvedTarget,notes
-threat,minaccia,Preferred translation
-threats,minacce,Preferred plural
-renew,rinnova,Imperative for buttons
-firewall,firewall,Keep in English
-password,password,Keep in English
-update,aggiornamento,Preferred translation
+source,approvedTarget,notes,enforcement
+threat,minaccia,Preferred translation,strict
+threats,minacce,Preferred plural,strict
+renew,rinnova,Imperative for buttons,advisory
+firewall,firewall,Keep in English,strict
+password,password,Keep in English,strict
+update,aggiornamento,Preferred translation,strict

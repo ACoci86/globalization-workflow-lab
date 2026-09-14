@@ -1,15 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 
-import { comparePlaceholders } from "./qa/comparePlaceholders";
 import { loadTerminology } from "./qa/terminology";
-import { checkTerminology } from "./qa/checkTerminology";
-import { checkProtectedTerms } from "./qa/checkProtectedTerms";
-import { checkLength } from "./qa/checkLength";
-import { checkKeys } from "./qa/checkKeys";
-import { checkUntranslated } from "./qa/checkUntranslated";
 import { loadTranslationMemory } from "./qa/translationMemory";
-import { checkTranslationMemory } from "./qa/checkTranslationMemory";
+import { checkKeys } from "./qa/checkKeys";
+import { evaluateDeterministicQa } from "./qa/evaluateDeterministicQa";
 
 import type { QaIssue } from "./types/qaReport";
 import { createReport } from "./qa/createReport";
@@ -62,11 +57,13 @@ const rules = JSON.parse(fs.readFileSync(rulesPath, "utf-8")) as {
 
 const translationMemory = loadTranslationMemory(translationMemoryPath);
 
-let hasErrors = false;
 const issues: QaIssue[] = [];
 
 const keyIssues = checkKeys(source, target);
 
+/*
+ * Extra keys exist in the target but not in the source.
+ */
 for (const key of keyIssues.extraInTarget) {
   const message = "Extra target key not found in source";
 
@@ -80,9 +77,15 @@ for (const key of keyIssues.extraInTarget) {
   });
 }
 
+/*
+ * Evaluate every source string independently.
+ */
 for (const [key, sourceText] of Object.entries(source)) {
   const targetText = target[key];
 
+  /*
+   * A missing translation is an immediate deterministic failure.
+   */
   if (targetText === undefined) {
     const message = "Translation key is missing";
 
@@ -95,156 +98,47 @@ for (const [key, sourceText] of Object.entries(source)) {
       message,
     });
 
-    hasErrors = true;
     continue;
   }
 
-  const placeholders = comparePlaceholders(sourceText, targetText);
-
-  if (placeholders.missing.length > 0) {
-    const message = `Missing placeholder ${placeholders.missing.join(", ")}`;
-
-    console.log(`FAIL [${key}]: ${message}`);
-
-    issues.push({
-      key,
-      check: "placeholders",
-      severity: "fail",
-      message,
-    });
-
-    hasErrors = true;
-  }
-
-  if (placeholders.extra.length > 0) {
-    const message = `Extra placeholder ${placeholders.extra.join(", ")}`;
-
-    console.log(`FAIL [${key}]: ${message}`);
-
-    issues.push({
-      key,
-      check: "placeholders",
-      severity: "fail",
-      message,
-    });
-
-    hasErrors = true;
-  }
-
-  const terminologyIssues = checkTerminology(
-    sourceText,
-    targetText,
-    terminology,
-  );
-
-  for (const issue of terminologyIssues) {
-    const message = `Expected "${issue.approvedTarget}" for "${issue.sourceTerm}"`;
-
-    console.log(`FAIL [${key}]: ${message}`);
-
-    issues.push({
-      key,
-      check: "terminology",
-      severity: "fail",
-      message,
-    });
-
-    hasErrors = true;
-  }
-
-  const translationMemoryIssue = checkTranslationMemory(
+  const result = evaluateDeterministicQa(
     sourceText,
     targetText,
     sourceLocale,
     targetLocale,
+    terminology,
+    rules,
     translationMemory,
   );
 
-  if (translationMemoryIssue) {
-    const message = `Target differs from translation memory: expected "${translationMemoryIssue.expectedTarget}"`;
-
-    console.log(`WARN [${key}]: ${message}`);
-
-    issues.push({
-      key,
-      check: "translationMemory",
-      severity: "warn",
-      message,
-    });
-  }
-
-  const protectedTermIssues = checkProtectedTerms(
-    sourceText,
-    targetText,
-    rules.protectedTerms,
-  );
-
-  for (const term of protectedTermIssues) {
-    const message = `Protected term changed: ${term}`;
-
-    console.log(`FAIL [${key}]: ${message}`);
+  /*
+   * Store and print every issue found for this string.
+   */
+  for (const issue of result.issues) {
+    console.log(`${issue.severity.toUpperCase()} [${key}]: ${issue.message}`);
 
     issues.push({
       key,
-      check: "protectedTerms",
-      severity: "fail",
-      message,
-    });
-
-    hasErrors = true;
-  }
-
-  const isUntranslated = checkUntranslated(sourceText, targetText);
-
-  const isProtectedOnly = rules.protectedTerms.some(
-    (term) => sourceText.trim() === term && targetText.trim() === term,
-  );
-
-  if (isUntranslated && !isProtectedOnly) {
-    const message = "Target appears to be untranslated";
-
-    console.log(`FAIL [${key}]: ${message}`);
-
-    issues.push({
-      key,
-      check: "untranslated",
-      severity: "fail",
-      message,
-    });
-
-    hasErrors = true;
-  }
-
-  const lengthIssue = checkLength(sourceText, targetText, rules.maxLengthRatio);
-
-  if (lengthIssue) {
-    const message = `Target is ${lengthIssue.ratio.toFixed(2)}x the source length`;
-
-    console.log(`WARN [${key}]: ${message}`);
-
-    issues.push({
-      key,
-      check: "length",
-      severity: "warn",
-      message,
+      check: issue.check,
+      severity: issue.severity,
+      message: issue.message,
     });
   }
 
-  const stringHasFailures =
-    placeholders.missing.length > 0 ||
-    placeholders.extra.length > 0 ||
-    terminologyIssues.length > 0 ||
-    protectedTermIssues.length > 0 ||
-    (isUntranslated && !isProtectedOnly);
-
-  if (!stringHasFailures) {
+  /*
+   * A string passes deterministic QA when no blocking
+   * deterministic check failed.
+   *
+   * Warnings such as length or TM differences do not block it.
+   */
+  if (result.passedBlockingChecks) {
     console.log(`PASS [${key}]`);
 
     issues.push({
       key,
       check: "overall",
       severity: "pass",
-      message: "All blocking QA checks passed",
+      message: "All blocking deterministic QA checks passed",
     });
   }
 }
@@ -262,6 +156,6 @@ console.log(
     `${report.summary.failures} failures`,
 );
 
-if (hasErrors) {
-  process.exit(1);
+if (report.summary.failures > 0) {
+  process.exitCode = 1;
 }
